@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel de Consultorias TR - Thomson Reuters</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Tela de Login -->
+    <div id="loginScreen" class="screen active">
+        <div class="login-container">
+            <div class="login-header">
+                <div class="tr-logo">
+                    <svg width="60" height="60" viewBox="0 0 60 60">
+                        <rect width="60" height="60" fill="#FF8000" rx="8"/>
+                        <text x="30" y="40" font-family="Arial" font-size="32" font-weight="bold" fill="white" text-anchor="middle">TR</text>
+                    </svg>
+                </div>
+                <h1>Painel de Consultorias TR</h1>
+                <p>Agendas e Roadmap de Produtos</p>
+            </div>
+            <div class="login-form">
+                <div class="input-group">
+                    <label>Usuário</label>
+                    <input type="text" id="username" placeholder="Digite seu usuário" autocomplete="username">
+                </div>
+                <div class="input-group">
+                    <label>Senha</label>
+                    <input type="password" id="password" placeholder="Digite sua senha" autocomplete="current-password">
+                </div>
+                <button onclick="login()" class="btn-primary">Entrar</button>
+                <div id="loginError" class="error-message"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dashboard Principal -->
+    <div id="dashboardScreen" class="screen">
+        <header class="main-header">
+            <div class="header-left">
+                <svg width="40" height="40" viewBox="0 0 60 60">
+                    <rect width="60" height="60" fill="#FF8000" rx="8"/>
+                    <text x="30" y="40" font-family="Arial" font-size="32" font-weight="bold" fill="white" text-anchor="middle">TR</text>
+                </svg>
+                <h1>Painel de Consultorias TR</h1>
+            </div>
+            <div class="header-right">
+                <span class="user-info">👤 <span id="currentUser"></span></span>
+                <button id="btnGerenciarUsuarios" onclick="openUsuariosModal()" class="btn-secondary" style="display:none;">👥 Usuários</button>
+                <button onclick="logout()" class="btn-secondary">Sair</button>
+            </div>
+        </header>
+
+        <div class="dashboard-container">
+            <!-- Menu Lateral -->
+            <aside class="sidebar">
+                <nav class="nav-menu">
+                    <button class="nav-item active" onclick="showSection('agendas')">
+                        <span class="nav-icon">📅</span>
+                        <span>Agendas</span>
+                    </button>
+                    <button class="nav-item" onclick="showSection('consultores')">
+                        <span class="nav-icon">👥</span>
+                        <span>Consultores</span>
+                    </button>
+                    <button class="nav-item" onclick="showSection('produtos')">
+                        <span class="nav-icon">📦</span>
+                        <span>Produtos</span>
+                    </button>
+                    <button class="nav-item" onclick="showSection('roadmap')">
+                        <span class="nav-icon">🗺️</span>
+                        <span>Roadmap</span>
+                    </button>
+                    <button class="nav-item" onclick="showSection('temas')">
+                        <span class="nav-icon">📚</span>
+                        <span>Temas</span>
+                    </button>
+                    <button class="nav-item" onclick="showSection('relatorios')">
+                        <span class="nav-icon">📊</span>
+                        <span>Relatórios</span>
+                    </button>
+                </nav>
+
+                <!-- Stats Card -->
+                <div class="stats-card">
+                    <h3>Resumo</h3>
+                    <div class="stat-item">
+                        <span>Agendas Hoje</span>
+                        <strong id="agendasHoje">0</strong>
+                    </div>
+                    <div class="stat-item">
+                        <span>Agendas Este Mês</span>
+                        <strong id="agendasMes">0</strong>
+                    </div>
+                    <div class="stat-item">
+                        <span>Consultores Ativos</span>
+                        <strong id="consultoresAtivos">0</strong>
+                    </div>
+                    <div class="stat-item">
+                        <span>Capacidade Restante</span>
+                        <strong id="capacidadeRestante">0</strong>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Conteúdo Principal -->
+            <main class="main-content">
+                <!-- Seção Agendas -->
+                <section id="agendasSection" class="content-section active">
+                    <div class="section-header">
+                        <h2>Gerenciamento de Agendas</h2>
+                        <button onclick="openAgendaModal()" class="btn-primary">➕ Nova Agenda</button>
+                    </div>
+
+                    <div class="filters-bar">
+                        <input type="text" id="searchAgenda" placeholder="🔍 Buscar agenda..." onkeyup="filterAgendas()">
+                        <select id="filterConsultor" onchange="filterAgendas()">
+                            <option value="">Todos os Consultores</option>
+                        </select>
+                        <select id="filterStatus" onchange="filterAgendas()">
+                            <option value="">Todos os Status</option>
+                            <option value="Agendada">Agendada</option>
+                            <option value="Realizada">Realizada</option>
+                            <option value="Cancelada">Cancelada</option>
+                        </select>
+                    </div>
+
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Data/Hora</th>
+                                    <th>Consultor</th>
+                                    <th>Cliente</th>
+                                    <th>Tema</th>
+                                    <th>Participantes</th>
+                                    <th>Status</th>
+                                    <th>Posts</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="agendasTableBody">
+                                <!-- Dados dinâmicos -->
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- Seção Consultores -->
+                <section id="consultoresSection" class="content-section">
+                    <div class="section-header">
+                        <h2>Gerenciamento de Consultores</h2>
+                        <button onclick="openConsultorModal()" class="btn-primary">➕ Novo Consultor</button>
+                    </div>
+
+                    <div class="consultores-grid" id="consultoresGrid">
+                        <!-- Cards dinâmicos -->
+                    </div>
+                </section>
+
+                <!-- Seção Produtos -->
+                <section id="produtosSection" class="content-section">
+                    <div class="section-header">
+                        <h2>Produtos TR</h2>
+                        <button onclick="openProdutoModal()" class="btn-primary">➕ Novo Produto</button>
+                    </div>
+
+                    <div class="produtos-grid" id="produtosGrid">
+                        <!-- Cards dinâmicos -->
+                    </div>
+                </section>
+
+                <!-- Seção Roadmap -->
+                <section id="roadmapSection" class="content-section">
+                    <div class="section-header">
+                        <h2>Roadmap de Produtos</h2>
+                        <div style="display:flex;gap:10px;">
+                            <button onclick="openAgendaModalFromRoadmap()" class="btn-secondary">📅 Criar Agenda com Roadmap</button>
+                            <button onclick="openRoadmapModal()" class="btn-primary">➕ Novo Item</button>
+                        </div>
+                    </div>
+
+                    <div class="filters-bar">
+                        <select id="filterProdutoRoadmap" onchange="filterRoadmap()">
+                            <option value="">Todos os Produtos</option>
+                        </select>
+                        <select id="filterStatusRoadmap" onchange="filterRoadmap()">
+                            <option value="">Todos os Status</option>
+                            <option value="Planejado">📋 Planejado</option>
+                            <option value="Em Desenvolvimento">⚙️ Em Desenvolvimento</option>
+                            <option value="Concluído">✅ Concluído</option>
+                            <option value="Cancelado">❌ Cancelado</option>
+                        </select>
+                        <div class="view-toggle" style="margin-left:auto;">
+                            <button class="toggle-btn active" onclick="switchMainRoadmapView('list')" data-view="list">
+                                📋 Lista
+                            </button>
+                            <button class="toggle-btn" onclick="switchMainRoadmapView('timeline')" data-view="timeline">
+                                📅 Timeline
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Visão Lista -->
+                    <div id="roadmapListView" class="roadmap-main-view active">
+                        <div class="roadmap-list" id="roadmapList">
+                            <!-- Lista dinâmica -->
+                        </div>
+                    </div>
+
+                    <!-- Visão Timeline Principal -->
+                    <div id="roadmapTimelineMainView" class="roadmap-main-view">
+                        <div id="roadmapTimelineMain" class="roadmap-timeline">
+                            <!-- Timeline principal -->
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Seção Temas -->
+                <section id="temasSection" class="content-section">
+                    <div class="section-header">
+                        <h2>Temas de Consultoria</h2>
+                        <button onclick="openTemaModal()" class="btn-primary">➕ Novo Tema</button>
+                    </div>
+
+                    <div class="temas-list" id="temasList">
+                        <!-- Lista dinâmica -->
+                    </div>
+                </section>
+
+                <!-- Seção Relatórios -->
+                <section id="relatoriosSection" class="content-section">
+                    <div class="section-header">
+                        <h2>Relatórios e Análises</h2>
+                    </div>
+
+                    <div class="charts-grid">
+                        <div class="chart-card">
+                            <h3>Agendas por Consultor</h3>
+                            <canvas id="chartConsultores"></canvas>
+                        </div>
+                        <div class="chart-card">
+                            <h3>Status de Posts</h3>
+                            <canvas id="chartPosts"></canvas>
+                        </div>
+                        <div class="chart-card">
+                            <h3>Itens Roadmap por Produto</h3>
+                            <canvas id="chartRoadmap"></canvas>
+                        </div>
+                    </div>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <!-- Modal Agenda (Expandido) -->
+    <div id="agendaModal" class="modal">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h2 id="agendaModalTitle">Nova Agenda</h2>
+                <button onclick="closeAgendaModal()" class="btn-close">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="tabs">
+                    <button class="tab-btn active" onclick="switchTab('basicInfo')">📋 Informações Básicas</button>
+                    <button class="tab-btn" onclick="switchTab('participants')">👥 Participantes</button>
+                    <button class="tab-btn" onclick="switchTab('roadmapItems')">🗺️ Roadmap</button>
+                    <button class="tab-btn" onclick="switchTab('ata')">📝 Ata</button>
+                    <button class="tab-btn" onclick="switchTab('posts')">📱 Posts</button>
+                </div>
+
+                <!-- Aba: Informações Básicas -->
+                <div id="basicInfo" class="tab-content active">
+                    <div class="form-grid">
+                        <div class="input-group">
+                            <label>Consultor *</label>
+                            <select id="agendaConsultor" required onchange="updateMaxParticipants()">
+                                <option value="">Selecione...</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label>Cliente *</label>
+                            <input type="text" id="agendaCliente" placeholder="Nome do cliente" required>
+                        </div>
+                        <div class="input-group">
+                            <label>Data *</label>
+                            <input type="date" id="agendaData" required>
+                        </div>
+                        <div class="input-group">
+                            <label>Hora *</label>
+                            <input type="time" id="agendaHora" required>
+                        </div>
+                        <div class="input-group">
+                            <label>Tema *</label>
+                            <select id="agendaTema" required>
+                                <option value="">Selecione...</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label>Duração (min)</label>
+                            <input type="number" id="agendaDuracao" value="60" min="15" step="15">
+                        </div>
+                        <div class="input-group full-width">
+                            <label>Observações</label>
+                            <textarea id="agendaObs" rows="3" placeholder="Informações adicionais..."></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Aba: Participantes -->
+                <div id="participants" class="tab-content">
+                    <div class="participant-header">
+                        <div class="input-group" style="flex: 1;">
+                            <label>Nome do Participante</label>
+                            <input type="text" id="participantName" placeholder="Digite o nome">
+                        </div>
+                        <div class="input-group" style="flex: 1;">
+                            <label>Email</label>
+                            <input type="email" id="participantEmail" placeholder="email@exemplo.com">
+                        </div>
+                        <button onclick="addParticipant()" class="btn-primary" style="margin-top: 24px;">➕ Adicionar</button>
+                    </div>
+                    <div class="participant-limit">
+                        <span>Participantes: <strong id="currentParticipants">0</strong> / <strong id="maxParticipants">0</strong></span>
+                    </div>
+                    <div id="participantsList" class="participants-list">
+                        <!-- Lista de participantes -->
+                    </div>
+                </div>
+
+                <!-- Aba: Itens Roadmap -->
+                <div id="roadmapItems" class="tab-content">
+                    <div class="roadmap-header">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                            <p style="color:#666;margin:0;">Selecione itens do roadmap para vincular a esta agenda</p>
+                            <div class="view-toggle">
+                                <button class="toggle-btn active" onclick="switchRoadmapView('kanban')" data-view="kanban">
+                                    📊 Por Produto
+                                </button>
+                                <button class="toggle-btn" onclick="switchRoadmapView('timeline')" data-view="timeline">
+                                    📅 Linha do Tempo
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Visão Kanban -->
+                    <div id="roadmapKanbanView" class="roadmap-view active">
+                        <div id="agendaRoadmapKanban" class="roadmap-kanban">
+                            <!-- Kanban de produtos -->
+                        </div>
+                    </div>
+
+                    <!-- Visão Timeline -->
+                    <div id="roadmapTimelineView" class="roadmap-view">
+                        <div id="agendaRoadmapTimeline" class="roadmap-timeline">
+                            <!-- Timeline -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Aba: Ata -->
+                <div id="ata" class="tab-content">
+                    <div class="input-group">
+                        <label>Ata da Reunião</label>
+                        <textarea id="agendaAta" rows="15" placeholder="Digite aqui a ata completa da reunião...&#10;&#10;Principais pontos discutidos:&#10;- &#10;- &#10;&#10;Decisões:&#10;- &#10;- &#10;&#10;Ações:&#10;- &#10;- " maxlength="10000"></textarea>
+                        <small class="char-counter"><span id="ataCharCount">0</span>/10000 caracteres</small>
+                    </div>
+                </div>
+
+                <!-- Aba: Posts -->
+                <div id="posts" class="tab-content">
+                    <div class="posts-control">
+                        <div class="post-item">
+                            <div class="checkbox-group">
+                                <input type="checkbox" id="postLinkedin" onchange="togglePostReason('linkedin')">
+                                <label for="postLinkedin">✅ Post no LinkedIn realizado</label>
+                            </div>
+                            <div id="reasonLinkedin" class="reason-group" style="display:none;">
+                                <label>Motivo de não ter sido feito:</label>
+                                <textarea id="reasonLinkedinText" rows="2" placeholder="Explique o motivo..."></textarea>
+                            </div>
+                        </div>
+
+                        <div class="post-item">
+                            <div class="checkbox-group">
+                                <input type="checkbox" id="postInterno" onchange="togglePostReason('interno')">
+                                <label for="postInterno">✅ Post Interno (Yammer/Teams) realizado</label>
+                            </div>
+                            <div id="reasonInterno" class="reason-group" style="display:none;">
+                                <label>Motivo de não ter sido feito:</label>
+                                <textarea id="reasonInternoText" rows="2" placeholder="Explique o motivo..."></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button onclick="closeAgendaModal()" class="btn-secondary">Cancelar</button>
+                <button onclick="saveAgenda()" class="btn-primary">💾 Salvar Agenda</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Consultor -->
+    <div id="consultorModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="consultorModalTitle">Novo Consultor</h2>
+                <button onclick="closeConsultorModal()" class="btn-close">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-grid">
+                    <div class="input-group">
+                        <label>Nome Completo *</label>
+                        <input type="text" id="consultorNome" placeholder="Nome do consultor" required>
+                    </div>
+                    <div class="input-group">
+                        <label>Email *</label>
+                        <input type="email" id="consultorEmail" placeholder="email@tr.com" required>
+                    </div>
+                    <div class="input-group">
+                        <label>Telefone</label>
+                        <input type="tel" id="consultorTelefone" placeholder="(00) 00000-0000">
+                    </div>
+                    <div class="input-group">
+                        <label>Especialidade</label>
+                        <input type="text" id="consultorEspecialidade" placeholder="Ex: SPED Fiscal">
+                    </div>
+                    <div class="input-group">
+                        <label>Agendas Disponíveis/Mês</label>
+                        <input type="number" id="consultorAgendas" value="20" min="0">
+                    </div>
+                    <div class="input-group">
+                        <label>Máx. Participantes por Agenda</label>
+                        <input type="number" id="consultorMaxParticipantes" value="10" min="1">
+                    </div>
+                    <div class="input-group">
+                        <label>Status</label>
+                        <select id="consultorStatus">
+                            <option value="Ativo">Ativo</option>
+                            <option value="Inativo">Inativo</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button onclick="closeConsultorModal()" class="btn-secondary">Cancelar</button>
+                <button onclick="saveConsultor()" class="btn-primary">Salvar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Produto -->
+    <div id="produtoModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="produtoModalTitle">Novo Produto</h2>
+                <button onclick="closeProdutoModal()" class="btn-close">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="input-group">
+                    <label>Nome do Produto *</label>
+                    <input type="text" id="produtoNome" placeholder="Ex: SPED Fiscal Pro" required>
+                </div>
+                <div class="input-group">
+                    <label>Descrição</label>
+                    <textarea id="produtoDescricao" rows="3" placeholder="Descrição do produto..."></textarea>
+                </div>
+                <div class="input-group">
+                    <label>Categoria</label>
+                    <input type="text" id="produtoCategoria" placeholder="Ex: SPED, Fiscal, Contábil">
+                </div>
+                <div class="input-group">
+                    <label>Cor</label>
+                    <input type="color" id="produtoCor" value="#FF8000">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button onclick="closeProdutoModal()" class="btn-secondary">Cancelar</button>
+                <button onclick="saveProduto()" class="btn-primary">Salvar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Roadmap -->
+    <div id="roadmapModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="roadmapModalTitle">Novo Item Roadmap</h2>
+                <button onclick="closeRoadmapModal()" class="btn-close">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-grid">
+                    <div class="input-group full-width">
+                        <label>Título do Item *</label>
+                        <input type="text" id="roadmapTitulo" placeholder="Ex: Implementar validação de XML" required>
+                    </div>
+                    <div class="input-group">
+                        <label>Produto *</label>
+                        <select id="roadmapProduto" required>
+                            <option value="">Selecione...</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label>Status</label>
+                        <select id="roadmapStatus">
+                            <option value="Planejado">Planejado</option>
+                            <option value="Em Desenvolvimento">Em Desenvolvimento</option>
+                            <option value="Concluído">Concluído</option>
+                            <option value="Cancelado">Cancelado</option>
+                        </select>
+                    </div>
+                    <div class="input-group full-width">
+                        <label>Descrição</label>
+                        <textarea id="roadmapDescricao" rows="3" placeholder="Descreva o item do roadmap..."></textarea>
+                    </div>
+                    <div class="input-group">
+                        <label>Prioridade</label>
+                        <select id="roadmapPrioridade">
+                            <option value="Baixa">Baixa</option>
+                            <option value="Média">Média</option>
+                            <option value="Alta">Alta</option>
+                            <option value="Crítica">Crítica</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label>Previsão de Entrega</label>
+                        <input type="date" id="roadmapPrevisao">
+                    </div>
+                    <div class="input-group full-width">
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="roadmapDependeReceita">
+                            <label for="roadmapDependeReceita">⚠️ Depende de ação da Receita Federal</label>
+                        </div>
+                    </div>
+                    <div class="input-group full-width">
+                        <label>Outras Dependências</label>
+                        <textarea id="roadmapDependencias" rows="2" placeholder="Ex: Aguardando aprovação do time X, integração com sistema Y..."></textarea>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button onclick="closeRoadmapModal()" class="btn-secondary">Cancelar</button>
+                <button onclick="saveRoadmap()" class="btn-primary">Salvar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Tema -->
+    <div id="temaModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="temaModalTitle">Novo Tema</h2>
+                <button onclick="closeTemaModal()" class="btn-close">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="input-group">
+                    <label>Nome do Tema *</label>
+                    <input type="text" id="temaNome" placeholder="Ex: SPED Fiscal" required>
+                </div>
+                <div class="input-group">
+                    <label>Descrição</label>
+                    <textarea id="temaDescricao" rows="3" placeholder="Descrição do tema..."></textarea>
+                </div>
+                <div class="input-group">
+                    <label>Cor</label>
+                    <input type="color" id="temaCor" value="#FF8000">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button onclick="closeTemaModal()" class="btn-secondary">Cancelar</button>
+                <button onclick="saveTema()" class="btn-primary">Salvar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Usuários (Apenas Admin) -->
+    <div id="usuariosModal" class="modal">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h2>👥 Gerenciamento de Usuários</h2>
+                <button onclick="closeUsuariosModal()" class="btn-close">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="section-header" style="margin-bottom:20px;">
+                    <h3 style="font-size:16px;color:#374151;">Usuários Cadastrados</h3>
+                    <button onclick="openNovoUsuarioForm()" class="btn-primary">➕ Novo Usuário</button>
+                </div>
+
+                <!-- Formulário Novo Usuário (Inicialmente oculto) -->
+                <div id="novoUsuarioForm" style="display:none;background:#F9FAFB;padding:20px;border-radius:8px;margin-bottom:20px;border:2px solid #E5E7EB;">
+                    <h4 style="font-size:14px;color:#374151;margin-bottom:16px;">Cadastrar Novo Usuário</h4>
+                    <div class="form-grid">
+                        <div class="input-group">
+                            <label>Nome Completo *</label>
+                            <input type="text" id="novoUsuarioNome" placeholder="Nome do usuário" required>
+                        </div>
+                        <div class="input-group">
+                            <label>Usuário (Login) *</label>
+                            <input type="text" id="novoUsuarioUsername" placeholder="usuario123" required>
+                        </div>
+                        <div class="input-group">
+                            <label>Senha *</label>
+                            <input type="password" id="novoUsuarioPassword" placeholder="Mínimo 6 caracteres" required>
+                        </div>
+                        <div class="input-group">
+                            <label>Confirmar Senha *</label>
+                            <input type="password" id="novoUsuarioPasswordConfirm" placeholder="Digite novamente" required>
+                        </div>
+                        <div class="input-group">
+                            <label>Perfil</label>
+                            <select id="novoUsuarioPerfil">
+                                <option value="user">Usuário</option>
+                                <option value="admin">Administrador</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div style="display:flex;gap:10px;margin-top:16px;">
+                        <button onclick="cancelarNovoUsuario()" class="btn-secondary">Cancelar</button>
+                        <button onclick="salvarNovoUsuario()" class="btn-primary">💾 Salvar Usuário</button>
+                    </div>
+                    <div id="usuarioError" class="error-message" style="margin-top:12px;"></div>
+                </div>
+
+                <!-- Lista de Usuários -->
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Nome</th>
+                                <th>Usuário</th>
+                                <th>Perfil</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="usuariosTableBody">
+                            <!-- Dados dinâmicos -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button onclick="closeUsuariosModal()" class="btn-secondary">Fechar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Editar Usuário -->
+    <div id="editarUsuarioModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Editar Usuário</h2>
+                <button onclick="closeEditarUsuarioModal()" class="btn-close">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="input-group">
+                    <label>Nome Completo *</label>
+                    <input type="text" id="editUsuarioNome" required>
+                </div>
+                <div class="input-group">
+                    <label>Usuário (Login)</label>
+                    <input type="text" id="editUsuarioUsername" disabled style="background:#F3F4F6;cursor:not-allowed;">
+                    <small style="color:#6B7280;font-size:12px;">O username não pode ser alterado</small>
+                </div>
+                <div class="input-group">
+                    <label>Nova Senha (deixe em branco para não alterar)</label>
+                    <input type="password" id="editUsuarioPassword" placeholder="Nova senha">
+                </div>
+                <div class="input-group">
+                    <label>Confirmar Nova Senha</label>
+                    <input type="password" id="editUsuarioPasswordConfirm" placeholder="Confirme a senha">
+                </div>
+                <div class="input-group">
+                    <label>Perfil</label>
+                    <select id="editUsuarioPerfil">
+                        <option value="user">Usuário</option>
+                        <option value="admin">Administrador</option>
+                    </select>
+                </div>
+                <div id="editUsuarioError" class="error-message"></div>
+            </div>
+            <div class="modal-footer">
+                <button onclick="closeEditarUsuarioModal()" class="btn-secondary">Cancelar</button>
+                <button onclick="salvarEdicaoUsuario()" class="btn-primary">Salvar Alterações</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

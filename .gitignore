@@ -1,0 +1,32 @@
+# Sistema SPED TR - GitIgnore
+
+# Arquivos temporários
+*.tmp
+*.temp
+*.bak
+*.swp
+*~
+
+# Sistema operacional
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+
+# Backup de dados
+backup-*.json
+
+# Node modules (se houver futuramente)
+node_modules/
+package-lock.json
+
+# IDE
+.vscode/
+.idea/
+*.sublime-*
+
+# Ambiente
+.env
+.env.local
