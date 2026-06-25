@@ -1,0 +1,13 @@
+run = "npm start"
+entrypoint = "server.js"
+hidden = [".config"]
+
+[nix]
+channel = "stable-22_11"
+
+[deployment]
+run = ["sh", "-c", "npm install && npm run setup && npm start"]
+deploymentTarget = "cloudrun"
+
+[env]
+NODE_ENV = "production"
