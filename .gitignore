@@ -1,32 +1,51 @@
-# Sistema SPED TR - GitIgnore
+# Node.js
+node_modules/
+npm-debug.log
+yarn-error.log
+package-lock.json
+yarn.lock
 
-# Arquivos temporários
-*.tmp
-*.temp
-*.bak
-*.swp
-*~
+# Environment variables
+.env
+.env.local
+.env.production
 
-# Sistema operacional
+# Database - NÃO COMMITAR EM PRODUÇÃO
+database.db
+database.db-shm
+database.db-wal
+*.db-journal
+backups/
+
+# Logs
+logs/
+*.log
+
+# OS
 .DS_Store
 Thumbs.db
 desktop.ini
 
-# Logs
-*.log
-
-# Backup de dados
-backup-*.json
-
-# Node modules (se houver futuramente)
-node_modules/
-package-lock.json
-
 # IDE
 .vscode/
 .idea/
+*.swp
+*.swo
+*~
 *.sublime-*
 
-# Ambiente
-.env
-.env.local
+# Build
+dist/
+build/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+*.bak
+backup-*.json
+
+# Backups locais
+*-backup.js
+app-localStorage-backup.js

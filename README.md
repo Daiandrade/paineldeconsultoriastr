@@ -2,9 +2,11 @@
 
 ![Status](https://img.shields.io/badge/status-production-brightgreen)
 ![Version](https://img.shields.io/badge/version-2.3.0-blue)
+![Backend](https://img.shields.io/badge/backend-Node.js-success)
+![Database](https://img.shields.io/badge/database-SQLite-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-Sistema completo de gerenciamento de agendas de consultorias e roadmap de produtos, desenvolvido com HTML, CSS e JavaScript puro.
+Sistema completo de gerenciamento de agendas de consultorias e roadmap de produtos TR com **backend Node.js** e banco de dados real.
 
 ---
 
@@ -60,65 +62,100 @@ Sistema completo de gerenciamento de agendas de consultorias e roadmap de produt
 
 ## 🚀 Como Usar
 
-### **Localmente:**
+### **Instalação Rápida (3 minutos):**
 
-1. Baixar todos os arquivos
-2. Abrir `index.html` no navegador
-3. Login: `admin` / `admin123`
+```bash
+# 1. Instalar dependências
+npm install
 
-### **Em Produção:**
+# 2. Configurar ambiente
+cp .env.example .env
+# Editar .env e adicionar JWT_SECRET forte
 
-Consulte o arquivo **`DEPLOY.md`** para instruções completas de deploy em:
-- GitHub Pages (gratuito)
-- Netlify (gratuito)
-- Vercel (gratuito)
-- Servidor próprio
+# 3. Configurar banco de dados
+npm run setup
+
+# 4. Iniciar servidor
+npm start
+
+# 5. Acessar http://localhost:3000
+# Login: admin / admin123
+```
+
+📖 **Guia completo:** [INSTALL.md](INSTALL.md)
+
+### **Deploy em Produção:**
+
+Consulte o arquivo **`DEPLOY-BACKEND.md`** para instruções de deploy em:
+- **Heroku** (gratuito até certo ponto)
+- **Render** (100% gratuito)
+- **Railway** (gratuito)
+- **VPS/Servidor próprio**
 
 ---
 
 ## 📁 Estrutura de Arquivos
 
 ```
-sistema-sped-tr/
-├── index.html              # Página principal
-├── styles.css              # Estilos completos
-├── app.js                  # Lógica JavaScript
-├── reset.html              # Utilitário de reset
-├── README.md               # Este arquivo
-├── DEPLOY.md               # Guia de deploy
-├── FEATURES.md             # Funcionalidades detalhadas
-├── TIMELINE-GUIDE.md       # Guia da timeline
-├── CONTAGEM-AGENDAS.md     # Lógica de contagem
-└── .gitignore              # Arquivos ignorados
+painel-consultorias-tr/
+├── Backend
+│   ├── server.js                # Servidor Express + API REST
+│   ├── setup-db.js              # Configuração do banco
+│   ├── package.json             # Dependências Node.js
+│   ├── .env.example             # Exemplo de configuração
+│   └── database.db              # Banco SQLite (gerado)
+├── Frontend
+│   ├── index.html               # Página principal
+│   ├── styles.css               # Estilos completos
+│   ├── app.js                   # Lógica + integração API
+│   └── reset.html               # Utilitário de reset
+├── Documentação
+│   ├── README.md                # Este arquivo
+│   ├── INSTALL.md               # Instalação rápida
+│   ├── DEPLOY-BACKEND.md        # Deploy com backend
+│   ├── DEPLOY.md                # Deploy frontend only
+│   ├── FEATURES.md              # Funcionalidades
+│   ├── TIMELINE-GUIDE.md        # Guia da timeline
+│   └── CONTAGEM-AGENDAS.md      # Lógica de contagem
+└── .gitignore                   # Arquivos ignorados
 ```
 
 ---
 
 ## 🔐 Segurança
 
-- Sistema de login com sessão
-- Dados armazenados em `localStorage`
-- **IMPORTANTE:** Alterar senhas padrão antes de produção
-- HTTPS obrigatório em produção
-- Backup de dados via console
+- ✅ **Autenticação JWT** com tokens seguros
+- ✅ **Senhas criptografadas** com bcrypt
+- ✅ **Banco de dados real** (SQLite)
+- ✅ **API RESTful** com middleware de autenticação
+- ⚠️ **IMPORTANTE:** Alterar senhas padrão no primeiro acesso
+- 🔒 **HTTPS obrigatório** em produção
+- 💾 **Backups automáticos** recomendados
 
 ---
 
 ## 🛠️ Tecnologias
 
+### **Backend:**
+- **Node.js** - Runtime JavaScript
+- **Express** - Framework web
+- **SQLite** (better-sqlite3) - Banco de dados
+- **JWT** (jsonwebtoken) - Autenticação
+- **bcryptjs** - Criptografia de senhas
+- **dotenv** - Variáveis de ambiente
+
+### **Frontend:**
 - **HTML5** - Estrutura semântica
 - **CSS3** - Estilização avançada
   - Flexbox & Grid
   - Animações e transições
   - Variáveis CSS
   - Media queries
-- **JavaScript ES6+** - Lógica pura
-  - LocalStorage API
+- **JavaScript ES6+** - Lógica + integração API
+  - Fetch API
+  - LocalStorage (para token)
   - Date API
   - Manipulação DOM
-  - Eventos
-
-**Zero dependências externas!**
 
 ---
 
@@ -197,17 +234,22 @@ console.log(JSON.stringify(backup));
 
 ## 🎯 Roadmap Futuro
 
-Possíveis melhorias:
+Já implementado:
+- [x] Backend com API REST ✅
+- [x] Banco de dados SQLite ✅
+- [x] Sistema de autenticação JWT ✅
+- [x] Criptografia de senhas ✅
 
-- [ ] Backend com API REST
-- [ ] Banco de dados (MySQL/PostgreSQL)
-- [ ] Sistema de permissões por usuário
+Possíveis melhorias:
+- [ ] Migrar para PostgreSQL/MySQL
 - [ ] Notificações de agendas próximas
 - [ ] Exportar para Excel/PDF
-- [ ] Integração com calendário
-- [ ] Gráficos com Chart.js
-- [ ] Histórico de alterações
+- [ ] Integração com calendário (Google/Outlook)
+- [ ] Gráficos avançados com Chart.js
+- [ ] Histórico de alterações (audit log)
 - [ ] Multi-tenant
+- [ ] API de webhook
+- [ ] Integração com Slack/Teams
 
 ---
 
@@ -219,12 +261,13 @@ MIT License - Livre para uso e modificação
 
 ## 👨‍💻 Desenvolvimento
 
-**Versão Atual:** 2.2.0 - Smart Counting Edition  
+**Versão Atual:** 2.3.0 - Production Backend Edition  
 **Data:** Junho 2026  
-**Status:** ✅ Produção
+**Status:** ✅ Produção com Backend
 
 ### **Histórico de Versões:**
 
+- **2.3.0** - Backend Node.js + SQLite + JWT + API REST ✨
 - **2.2.0** - Lógica de contagem por mês atual
 - **2.1.0** - Timeline visual robusta
 - **2.0.0** - Kanban de roadmap
