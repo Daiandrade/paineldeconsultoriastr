@@ -10,7 +10,7 @@ const path = require('path');
 const { promisify } = require('util');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3000; // Glitch usa porta dinâmica
 const JWT_SECRET = process.env.JWT_SECRET || 'tr-sped-secret-key-change-in-production';
 
 // Middleware

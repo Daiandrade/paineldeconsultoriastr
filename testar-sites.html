@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Testar Plataformas de Deploy</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        .platform {
+            border: 2px solid #ddd;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+        .platform h3 {
+            margin-top: 0;
+            color: #FF8000;
+        }
+        .test-btn {
+            background: #FF8000;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+        }
+        .test-btn:hover {
+            background: #cc6600;
+        }
+        .status {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 4px;
+            margin-left: 10px;
+            font-weight: bold;
+        }
+        .ok { background: #10B981; color: white; }
+        .blocked { background: #EF4444; color: white; }
+        .testing { background: #F59E0B; color: white; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Testar Plataformas de Deploy</h1>
+    <p>Clique em "Testar" para ver se a plataforma está acessível na sua rede TR:</p>
+
+    <div class="platform">
+        <h3>1. Vercel</h3>
+        <p>Plataforma moderna para deploy de aplicações web</p>
+        <button class="test-btn" onclick="testSite('https://vercel.com', 'vercel')">Testar Vercel</button>
+        <span id="vercel-status"></span>
+    </div>
+
+    <div class="platform">
+        <h3>2. Netlify</h3>
+        <p>Deploy automático de sites e aplicações</p>
+        <button class="test-btn" onclick="testSite('https://netlify.com', 'netlify')">Testar Netlify</button>
+        <span id="netlify-status"></span>
+    </div>
+
+    <div class="platform">
+        <h3>3. Cyclic</h3>
+        <p>Especializado em Node.js e MongoDB</p>
+        <button class="test-btn" onclick="testSite('https://cyclic.sh', 'cyclic')">Testar Cyclic</button>
+        <span id="cyclic-status"></span>
+    </div>
+
+    <div class="platform">
+        <h3>4. Glitch</h3>
+        <p>Deploy fácil com editor online</p>
+        <button class="test-btn" onclick="testSite('https://glitch.com', 'glitch')">Testar Glitch</button>
+        <span id="glitch-status"></span>
+    </div>
+
+    <div class="platform">
+        <h3>5. Fly.io</h3>
+        <p>Plataforma moderna para aplicações</p>
+        <button class="test-btn" onclick="testSite('https://fly.io', 'fly')">Testar Fly.io</button>
+        <span id="fly-status"></span>
+    </div>
+
+    <div class="platform">
+        <h3>6. Replit</h3>
+        <p>Editor + Deploy em um só lugar</p>
+        <button class="test-btn" onclick="testSite('https://replit.com', 'replit')">Testar Replit</button>
+        <span id="replit-status"></span>
+    </div>
+
+    <script>
+        function testSite(url, id) {
+            const statusEl = document.getElementById(id + '-status');
+            statusEl.className = 'status testing';
+            statusEl.textContent = 'Testando...';
+
+            // Tentar abrir em nova aba
+            const win = window.open(url, '_blank');
+
+            setTimeout(() => {
+                if (win && !win.closed) {
+                    statusEl.className = 'status ok';
+                    statusEl.textContent = '✅ FUNCIONOU!';
+                } else {
+                    statusEl.className = 'status blocked';
+                    statusEl.textContent = '❌ Bloqueado';
+                }
+            }, 2000);
+        }
+
+        function testAll() {
+            testSite('https://vercel.com', 'vercel');
+            setTimeout(() => testSite('https://netlify.com', 'netlify'), 500);
+            setTimeout(() => testSite('https://cyclic.sh', 'cyclic'), 1000);
+            setTimeout(() => testSite('https://glitch.com', 'glitch'), 1500);
+            setTimeout(() => testSite('https://fly.io', 'fly'), 2000);
+            setTimeout(() => testSite('https://replit.com', 'replit'), 2500);
+        }
+    </script>
+
+    <br><br>
+    <button class="test-btn" onclick="testAll()" style="background:#10B981;padding:15px 30px;font-size:18px;">
+        🚀 Testar Todas de Uma Vez
+    </button>
+
+    <hr style="margin:40px 0;">
+
+    <h3>📋 Depois de testar:</h3>
+    <ol>
+        <li>Veja qual ficou verde (✅ FUNCIONOU!)</li>
+        <li>Me diga qual funcionou</li>
+        <li>Vou te dar o passo a passo para deploy naquela plataforma!</li>
+    </ol>
+</body>
+</html>
