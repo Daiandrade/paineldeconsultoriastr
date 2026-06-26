@@ -49,3 +49,6 @@ backup-*.json
 # Backups locais
 *-backup.js
 app-localStorage-backup.js
+
+# Netlify
+.netlify/
