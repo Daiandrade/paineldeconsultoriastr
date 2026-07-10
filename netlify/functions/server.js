@@ -59,7 +59,7 @@ const authenticateToken = (req, res, next) => {
 
 // ===== ROTAS DE AUTENTICAÇÃO =====
 
-app.post('/auth/login', async (req, res) => {
+app.post('/api/auth/login', async (req, res) => {
     try {
         const { username, password } = req.body;
 
@@ -102,7 +102,7 @@ app.post('/auth/login', async (req, res) => {
 
 // ===== ROTAS DE CONSULTORES =====
 
-app.get('/consultores', authenticateToken, async (req, res) => {
+app.get('/api/consultores', authenticateToken, async (req, res) => {
     try {
         const consultores = await dbAll('SELECT * FROM consultores ORDER BY nome');
         res.json(consultores);
@@ -112,7 +112,7 @@ app.get('/consultores', authenticateToken, async (req, res) => {
     }
 });
 
-app.post('/consultores', authenticateToken, async (req, res) => {
+app.post('/api/consultores', authenticateToken, async (req, res) => {
     try {
         const { nome, email, telefone, especialidade, agendasDisponiveis, maxParticipantes, status } = req.body;
 
@@ -128,7 +128,7 @@ app.post('/consultores', authenticateToken, async (req, res) => {
     }
 });
 
-app.put('/consultores/:id', authenticateToken, async (req, res) => {
+app.put('/api/consultores/:id', authenticateToken, async (req, res) => {
     try {
         const { id } = req.params;
         const { nome, email, telefone, especialidade, agendasDisponiveis, maxParticipantes, status } = req.body;
@@ -146,7 +146,7 @@ app.put('/consultores/:id', authenticateToken, async (req, res) => {
     }
 });
 
-app.delete('/consultores/:id', authenticateToken, async (req, res) => {
+app.delete('/api/consultores/:id', authenticateToken, async (req, res) => {
     try {
         const { id } = req.params;
         await dbRun('DELETE FROM consultores WHERE id = ?', [id]);
@@ -159,7 +159,7 @@ app.delete('/consultores/:id', authenticateToken, async (req, res) => {
 
 // ===== ROTAS DE PRODUTOS =====
 
-app.get('/produtos', authenticateToken, async (req, res) => {
+app.get('/api/produtos', authenticateToken, async (req, res) => {
     try {
         const produtos = await dbAll('SELECT * FROM produtos ORDER BY nome');
         res.json(produtos);
@@ -169,7 +169,7 @@ app.get('/produtos', authenticateToken, async (req, res) => {
     }
 });
 
-app.post('/produtos', authenticateToken, async (req, res) => {
+app.post('/api/produtos', authenticateToken, async (req, res) => {
     try {
         const { nome, descricao, categoria, cor } = req.body;
         const result = await dbRun('INSERT INTO produtos (nome, descricao, categoria, cor) VALUES (?, ?, ?, ?)',
@@ -181,7 +181,7 @@ app.post('/produtos', authenticateToken, async (req, res) => {
     }
 });
 
-app.put('/produtos/:id', authenticateToken, async (req, res) => {
+app.put('/api/produtos/:id', authenticateToken, async (req, res) => {
     try {
         const { id } = req.params;
         const { nome, descricao, categoria, cor } = req.body;
@@ -194,7 +194,7 @@ app.put('/produtos/:id', authenticateToken, async (req, res) => {
     }
 });
 
-app.delete('/produtos/:id', authenticateToken, async (req, res) => {
+app.delete('/api/produtos/:id', authenticateToken, async (req, res) => {
     try {
         const { id } = req.params;
         await dbRun('DELETE FROM produtos WHERE id = ?', [id]);
@@ -207,7 +207,7 @@ app.delete('/produtos/:id', authenticateToken, async (req, res) => {
 
 // ===== ROTAS DE TEMAS =====
 
-app.get('/temas', authenticateToken, async (req, res) => {
+app.get('/api/temas', authenticateToken, async (req, res) => {
     try {
         const temas = await dbAll('SELECT * FROM temas ORDER BY nome');
         res.json(temas);
@@ -217,7 +217,7 @@ app.get('/temas', authenticateToken, async (req, res) => {
     }
 });
 
-app.post('/temas', authenticateToken, async (req, res) => {
+app.post('/api/temas', authenticateToken, async (req, res) => {
     try {
         const { nome, descricao, cor } = req.body;
         const result = await dbRun('INSERT INTO temas (nome, descricao, cor) VALUES (?, ?, ?)', [nome, descricao, cor]);
@@ -228,7 +228,7 @@ app.post('/temas', authenticateToken, async (req, res) => {
     }
 });
 
-app.put('/temas/:id', authenticateToken, async (req, res) => {
+app.put('/api/temas/:id', authenticateToken, async (req, res) => {
     try {
         const { id } = req.params;
         const { nome, descricao, cor } = req.body;
@@ -240,7 +240,7 @@ app.put('/temas/:id', authenticateToken, async (req, res) => {
     }
 });
 
-app.delete('/temas/:id', authenticateToken, async (req, res) => {
+app.delete('/api/temas/:id', authenticateToken, async (req, res) => {
     try {
         const { id } = req.params;
         await dbRun('DELETE FROM temas WHERE id = ?', [id]);
@@ -253,7 +253,7 @@ app.delete('/temas/:id', authenticateToken, async (req, res) => {
 
 // ===== ROTAS DE ROADMAP =====
 
-app.get('/roadmap', authenticateToken, async (req, res) => {
+app.get('/api/roadmap', authenticateToken, async (req, res) => {
     try {
         const roadmap = await dbAll('SELECT * FROM roadmap ORDER BY previsao, prioridade');
         res.json(roadmap);
@@ -263,7 +263,7 @@ app.get('/roadmap', authenticateToken, async (req, res) => {
     }
 });
 
-app.post('/roadmap', authenticateToken, async (req, res) => {
+app.post('/api/roadmap', authenticateToken, async (req, res) => {
     try {
         const { titulo, produtoId, produtoNome, descricao, status, prioridade, previsao, dependeReceita, dependencias } = req.body;
         const result = await dbRun(`
@@ -277,7 +277,7 @@ app.post('/roadmap', authenticateToken, async (req, res) => {
     }
 });
 
-app.put('/roadmap/:id', authenticateToken, async (req, res) => {
+app.put('/api/roadmap/:id', authenticateToken, async (req, res) => {
     try {
         const { id } = req.params;
         const { titulo, produtoId, produtoNome, descricao, status, prioridade, previsao, dependeReceita, dependencias } = req.body;
@@ -293,7 +293,7 @@ app.put('/roadmap/:id', authenticateToken, async (req, res) => {
     }
 });
 
-app.delete('/roadmap/:id', authenticateToken, async (req, res) => {
+app.delete('/api/roadmap/:id', authenticateToken, async (req, res) => {
     try {
         const { id } = req.params;
         await dbRun('DELETE FROM roadmap WHERE id = ?', [id]);
@@ -306,7 +306,7 @@ app.delete('/roadmap/:id', authenticateToken, async (req, res) => {
 
 // ===== ROTAS DE AGENDAS =====
 
-app.get('/agendas', authenticateToken, async (req, res) => {
+app.get('/api/agendas', authenticateToken, async (req, res) => {
     try {
         const agendas = await dbAll('SELECT * FROM agendas ORDER BY data DESC, hora DESC');
         agendas.forEach(agenda => {
@@ -322,7 +322,7 @@ app.get('/agendas', authenticateToken, async (req, res) => {
     }
 });
 
-app.post('/agendas', authenticateToken, async (req, res) => {
+app.post('/api/agendas', authenticateToken, async (req, res) => {
     try {
         const {
             consultorId, consultorNome, cliente, data, hora, tema, status, duracao, observacoes,
@@ -353,7 +353,7 @@ app.post('/agendas', authenticateToken, async (req, res) => {
     }
 });
 
-app.put('/agendas/:id', authenticateToken, async (req, res) => {
+app.put('/api/agendas/:id', authenticateToken, async (req, res) => {
     try {
         const { id } = req.params;
         const {
@@ -386,7 +386,7 @@ app.put('/agendas/:id', authenticateToken, async (req, res) => {
     }
 });
 
-app.delete('/agendas/:id', authenticateToken, async (req, res) => {
+app.delete('/api/agendas/:id', authenticateToken, async (req, res) => {
     try {
         const { id } = req.params;
         const agenda = await dbGet('SELECT consultorId FROM agendas WHERE id = ?', [id]);
@@ -420,7 +420,7 @@ async function recalcularAgendasConsultor(consultorId) {
 
 // ===== ESTATÍSTICAS =====
 
-app.get('/stats', authenticateToken, async (req, res) => {
+app.get('/api/stats', authenticateToken, async (req, res) => {
     try {
         const hoje = new Date().toISOString().split('T')[0];
         const mesAtual = (new Date().getMonth() + 1).toString().padStart(2, '0');
