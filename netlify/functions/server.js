@@ -22,17 +22,17 @@ const db = createClient({
 
 // Helper functions
 async function dbGet(sql, params = []) {
-    const result = await db.execute(sql, params);
+    const result = await db.execute({ sql, args: params });
     return result.rows[0] || null;
 }
 
 async function dbAll(sql, params = []) {
-    const result = await db.execute(sql, params);
+    const result = await db.execute({ sql, args: params });
     return result.rows;
 }
 
 async function dbRun(sql, params = []) {
-    const result = await db.execute(sql, params);
+    const result = await db.execute({ sql, args: params });
     return {
         lastID: result.lastInsertRowid,
         changes: result.rowsAffected
