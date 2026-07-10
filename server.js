@@ -411,9 +411,9 @@ app.delete('/api/roadmap/:id', authenticateToken, (req, res) => {
 
 // ===== ROTAS DE AGENDAS =====
 
-app.get('/api/agendas', authenticateToken, (req, res) => {
+app.get('/api/agendas', authenticateToken, async (req, res) => {
     try {
-        const agendas = db.prepare('SELECT * FROM agendas ORDER BY data DESC, hora DESC').all();
+        const agendas = await dbAll('SELECT * FROM agendas ORDER BY data DESC, hora DESC');
 
         // Parse JSON fields
         agendas.forEach(agenda => {

@@ -249,34 +249,18 @@ const defaultAgendas = [
 
 // ===== INICIALIZAÇÃO =====
 function initApp() {
-    if (!localStorage.getItem('users')) {
-        localStorage.setItem('users', JSON.stringify(defaultUsers));
-    }
-    if (!localStorage.getItem('consultores')) {
-        localStorage.setItem('consultores', JSON.stringify(defaultConsultores));
-    }
-    if (!localStorage.getItem('produtos')) {
-        localStorage.setItem('produtos', JSON.stringify(defaultProdutos));
-    }
-    if (!localStorage.getItem('roadmap')) {
-        localStorage.setItem('roadmap', JSON.stringify(defaultRoadmap));
-    }
-    if (!localStorage.getItem('temas')) {
-        localStorage.setItem('temas', JSON.stringify(defaultTemas));
-    }
-    if (!localStorage.getItem('agendas')) {
-        localStorage.setItem('agendas', JSON.stringify(defaultAgendas));
-    }
+    // Verificar se usuário já está logado (token válido)
+    const token = api.getToken();
+    const savedUser = api.getCurrentUser();
 
-    const savedUser = sessionStorage.getItem('currentUser');
-    if (savedUser) {
-        currentUser = JSON.parse(savedUser);
+    if (token && savedUser) {
+        currentUser = savedUser;
         showDashboard();
     }
 }
 
 // ===== LOGIN =====
-function login() {
+async function login() {
     const username = document.getElementById('username').value.trim();
     const password = document.getElementById('password').value.trim();
     const errorDiv = document.getElementById('loginError');
@@ -287,26 +271,26 @@ function login() {
         return;
     }
 
-    const users = JSON.parse(localStorage.getItem('users'));
-    const user = users.find(u => u.username === username && u.password === password);
+    try {
+        // Fazer login via API
+        const response = await api.post('/api/auth/login', { username, password });
 
-    if (user) {
-        currentUser = {
-            username: user.username,
-            name: user.name,
-            perfil: user.perfil || 'user' // Default para 'user' se não tiver perfil
-        };
-        sessionStorage.setItem('currentUser', JSON.stringify(currentUser));
+        // Salvar token e usuário
+        api.setToken(response.token);
+        currentUser = response.user;
+        api.setCurrentUser(currentUser);
+
         errorDiv.classList.remove('show');
         showDashboard();
-    } else {
-        errorDiv.textContent = 'Usuário ou senha incorretos';
+    } catch (error) {
+        console.error('Erro no login:', error);
+        errorDiv.textContent = error.message || 'Usuário ou senha incorretos';
         errorDiv.classList.add('show');
     }
 }
 
 function logout() {
-    sessionStorage.removeItem('currentUser');
+    api.removeToken();
     currentUser = null;
     document.getElementById('loginScreen').classList.add('active');
     document.getElementById('dashboardScreen').classList.remove('active');
@@ -376,77 +360,89 @@ function switchTabProgrammatic(tabName) {
 }
 
 // ===== DASHBOARD =====
-function loadDashboardData() {
-    // Recalcular agendas antes de exibir qualquer coisa
-    recalcularAgendasConsultores();
-
-    updateStats();
-    loadAgendas();
-    loadConsultores();
-    loadProdutos();
-    loadRoadmap();
-    loadTemas();
-    populateSelects();
+async function loadDashboardData() {
+    try {
+        // Carregar dados do servidor
+        await Promise.all([
+            updateStats(),
+            loadAgendas(),
+            loadConsultores(),
+            loadProdutos(),
+            loadRoadmap(),
+            loadTemas()
+        ]);
+        populateSelects();
+    } catch (error) {
+        console.error('Erro ao carregar dashboard:', error);
+        alert('Erro ao carregar dados. Verifique sua conexão.');
+    }
 }
 
-function updateStats() {
-    const agendas = JSON.parse(localStorage.getItem('agendas'));
-    const consultores = JSON.parse(localStorage.getItem('consultores'));
+async function updateStats() {
+    try {
+        const [agendas, consultores] = await Promise.all([
+            api.get('/api/agendas'),
+            api.get('/api/consultores')
+        ]);
 
-    // Data de hoje
-    const hoje = new Date();
-    const hojeDateString = hoje.toISOString().split('T')[0];
-    const mesAtual = hoje.getMonth();
-    const anoAtual = hoje.getFullYear();
+        // Data de hoje
+        const hoje = new Date();
+        const hojeDateString = hoje.toISOString().split('T')[0];
+        const mesAtual = hoje.getMonth();
+        const anoAtual = hoje.getFullYear();
 
-    // Agendas de hoje
-    const agendasHoje = agendas.filter(a => a.data === hojeDateString && a.status === 'Agendada').length;
+        // Agendas de hoje
+        const agendasHoje = agendas.filter(a => a.data === hojeDateString && a.status === 'Agendada').length;
 
-    // Agendas deste mês (Agendadas + Realizadas)
-    const agendasMes = agendas.filter(a => {
-        if (!a.data) return false;
-        const dataAgenda = new Date(a.data + 'T00:00:00');
-        const mesAgenda = dataAgenda.getMonth();
-        const anoAgenda = dataAgenda.getFullYear();
-        return mesAgenda === mesAtual && anoAgenda === anoAtual &&
-               (a.status === 'Agendada' || a.status === 'Realizada');
-    }).length;
+        // Agendas deste mês (Agendadas + Realizadas)
+        const agendasMes = agendas.filter(a => {
+            if (!a.data) return false;
+            const dataAgenda = new Date(a.data + 'T00:00:00');
+            const mesAgenda = dataAgenda.getMonth();
+            const anoAgenda = dataAgenda.getFullYear();
+            return mesAgenda === mesAtual && anoAgenda === anoAtual &&
+                   (a.status === 'Agendada' || a.status === 'Realizada');
+        }).length;
 
-    // Consultores ativos
-    const consultoresAtivos = consultores.filter(c => c.status === 'Ativo').length;
+        // Consultores ativos
+        const consultoresAtivos = consultores.filter(c => c.status === 'Ativo').length;
 
-    // Capacidade total disponível este mês
-    const capacidadeTotal = consultores
-        .filter(c => c.status === 'Ativo')
-        .reduce((sum, c) => sum + c.agendasDisponiveis, 0);
+        // Capacidade total disponível este mês
+        const capacidadeTotal = consultores
+            .filter(c => c.status === 'Ativo')
+            .reduce((sum, c) => sum + c.agendasDisponiveis, 0);
 
-    const capacidadeUsada = consultores
-        .filter(c => c.status === 'Ativo')
-        .reduce((sum, c) => sum + c.agendasUsadas, 0);
+        const capacidadeUsada = consultores
+            .filter(c => c.status === 'Ativo')
+            .reduce((sum, c) => sum + c.agendasUsadas, 0);
 
-    const capacidadeRestante = capacidadeTotal - capacidadeUsada;
+        const capacidadeRestante = capacidadeTotal - capacidadeUsada;
 
-    // Atualizar DOM
-    document.getElementById('agendasHoje').textContent = agendasHoje;
-    document.getElementById('agendasMes').textContent = agendasMes;
-    document.getElementById('consultoresAtivos').textContent = consultoresAtivos;
-    document.getElementById('capacidadeRestante').textContent = capacidadeRestante;
+        // Atualizar DOM
+        document.getElementById('agendasHoje').textContent = agendasHoje;
+        document.getElementById('agendasMes').textContent = agendasMes;
+        document.getElementById('consultoresAtivos').textContent = consultoresAtivos;
+        document.getElementById('capacidadeRestante').textContent = capacidadeRestante;
+    } catch (error) {
+        console.error('Erro ao atualizar estatísticas:', error);
+    }
 }
 
 // ===== AGENDAS =====
-function loadAgendas() {
-    const agendas = JSON.parse(localStorage.getItem('agendas')) || [];
-    const tbody = document.getElementById('agendasTableBody');
-    tbody.innerHTML = '';
+async function loadAgendas() {
+    try {
+        const agendas = await api.get('/api/agendas');
+        const tbody = document.getElementById('agendasTableBody');
+        tbody.innerHTML = '';
 
-    if (agendas.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:40px;color:#999;">Nenhuma agenda cadastrada</td></tr>';
-        return;
-    }
+        if (agendas.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:40px;color:#999;">Nenhuma agenda cadastrada</td></tr>';
+            return;
+        }
 
-    agendas.sort((a, b) => new Date(b.data + ' ' + b.hora) - new Date(a.data + ' ' + a.hora));
+        agendas.sort((a, b) => new Date(b.data + ' ' + b.hora) - new Date(a.data + ' ' + a.hora));
 
-    agendas.forEach(agenda => {
+        agendas.forEach(agenda => {
         // Garantir compatibilidade com dados antigos
         if (!agenda.participantes) agenda.participantes = [];
         if (!agenda.roadmapItems) agenda.roadmapItems = [];
@@ -480,15 +476,19 @@ function loadAgendas() {
         `;
         tbody.appendChild(tr);
     });
+    } catch (error) {
+        console.error('Erro ao carregar agendas:', error);
+    }
 }
 
-function filterAgendas() {
-    const searchTerm = document.getElementById('searchAgenda').value.toLowerCase();
-    const filterConsultor = document.getElementById('filterConsultor').value;
-    const filterStatus = document.getElementById('filterStatus').value;
+async function filterAgendas() {
+    try {
+        const searchTerm = document.getElementById('searchAgenda').value.toLowerCase();
+        const filterConsultor = document.getElementById('filterConsultor').value;
+        const filterStatus = document.getElementById('filterStatus').value;
 
-    const agendas = JSON.parse(localStorage.getItem('agendas')) || [];
-    const filtered = agendas.filter(agenda => {
+        const agendas = await api.get('/api/agendas');
+        const filtered = agendas.filter(agenda => {
         const matchSearch = agenda.cliente.toLowerCase().includes(searchTerm) ||
                           agenda.consultorNome.toLowerCase().includes(searchTerm) ||
                           agenda.tema.toLowerCase().includes(searchTerm);
@@ -539,6 +539,9 @@ function filterAgendas() {
         `;
         tbody.appendChild(tr);
     });
+    } catch (error) {
+        console.error('Erro ao filtrar agendas:', error);
+    }
 }
 
 function openAgendaModal(startTab = 'basicInfo') {
@@ -581,42 +584,47 @@ function closeAgendaModal() {
     document.getElementById('agendaModal').classList.remove('active');
 }
 
-function editAgenda(id) {
-    const agendas = JSON.parse(localStorage.getItem('agendas'));
-    const agenda = agendas.find(a => a.id === id);
+async function editAgenda(id) {
+    try {
+        const agendas = await api.get('/api/agendas');
+        const agenda = agendas.find(a => a.id === id);
 
-    if (agenda) {
-        editingId = id;
-        currentParticipants = [...agenda.participantes];
-        currentRoadmapItems = [...(agenda.roadmapItems || [])];
+        if (agenda) {
+            editingId = id;
+            currentParticipants = [...agenda.participantes];
+            currentRoadmapItems = [...(agenda.roadmapItems || [])];
 
-        document.getElementById('agendaModalTitle').textContent = 'Editar Agenda';
-        document.getElementById('agendaConsultor').value = agenda.consultorId;
-        document.getElementById('agendaCliente').value = agenda.cliente;
-        document.getElementById('agendaData').value = agenda.data;
-        document.getElementById('agendaHora').value = agenda.hora;
-        document.getElementById('agendaTema').value = agenda.tema;
-        document.getElementById('agendaDuracao').value = agenda.duracao;
-        document.getElementById('agendaObs').value = agenda.observacoes || '';
-        document.getElementById('agendaAta').value = agenda.ata || '';
-        document.getElementById('postLinkedin').checked = agenda.postLinkedin || false;
-        document.getElementById('postInterno').checked = agenda.postInterno || false;
-        document.getElementById('reasonLinkedinText').value = agenda.postLinkedinMotivo || '';
-        document.getElementById('reasonInternoText').value = agenda.postInternoMotivo || '';
+            document.getElementById('agendaModalTitle').textContent = 'Editar Agenda';
+            document.getElementById('agendaConsultor').value = agenda.consultorId;
+            document.getElementById('agendaCliente').value = agenda.cliente;
+            document.getElementById('agendaData').value = agenda.data;
+            document.getElementById('agendaHora').value = agenda.hora;
+            document.getElementById('agendaTema').value = agenda.tema;
+            document.getElementById('agendaDuracao').value = agenda.duracao;
+            document.getElementById('agendaObs').value = agenda.observacoes || '';
+            document.getElementById('agendaAta').value = agenda.ata || '';
+            document.getElementById('postLinkedin').checked = agenda.postLinkedin || false;
+            document.getElementById('postInterno').checked = agenda.postInterno || false;
+            document.getElementById('reasonLinkedinText').value = agenda.postLinkedinMotivo || '';
+            document.getElementById('reasonInternoText').value = agenda.postInternoMotivo || '';
 
-        togglePostReason('linkedin');
-        togglePostReason('interno');
-        updateMaxParticipants();
-        renderParticipants();
-        renderAgendaRoadmap();
-        renderAgendaRoadmapTimeline();
-        updateAtaCounter();
+            togglePostReason('linkedin');
+            togglePostReason('interno');
+            updateMaxParticipants();
+            renderParticipants();
+            renderAgendaRoadmap();
+            renderAgendaRoadmapTimeline();
+            updateAtaCounter();
 
-        document.getElementById('agendaModal').classList.add('active');
+            document.getElementById('agendaModal').classList.add('active');
+        }
+    } catch (error) {
+        console.error('Erro ao carregar agenda:', error);
+        alert('Erro ao carregar agenda. Tente novamente.');
     }
 }
 
-function saveAgenda() {
+async function saveAgenda() {
     const consultorId = parseInt(document.getElementById('agendaConsultor').value);
     const cliente = document.getElementById('agendaCliente').value.trim();
     const data = document.getElementById('agendaData').value;
@@ -635,19 +643,17 @@ function saveAgenda() {
         return;
     }
 
-    const agendas = JSON.parse(localStorage.getItem('agendas'));
-    const consultores = JSON.parse(localStorage.getItem('consultores'));
-    const consultor = consultores.find(c => c.id === consultorId);
+    try {
+        // Buscar dados do consultor
+        const consultores = await api.get('/api/consultores');
+        const consultor = consultores.find(c => c.id === consultorId);
 
-    if (currentParticipants.length > consultor.maxParticipantes) {
-        alert(`Número máximo de participantes excedido! Limite: ${consultor.maxParticipantes}`);
-        return;
-    }
+        if (currentParticipants.length > consultor.maxParticipantes) {
+            alert(`Número máximo de participantes excedido! Limite: ${consultor.maxParticipantes}`);
+            return;
+        }
 
-    if (editingId) {
-        const index = agendas.findIndex(a => a.id === editingId);
-        agendas[index] = {
-            ...agendas[index],
+        const agendaData = {
             consultorId,
             consultorNome: consultor.nome,
             cliente,
@@ -662,58 +668,44 @@ function saveAgenda() {
             postLinkedin,
             postLinkedinMotivo,
             postInterno,
-            postInternoMotivo
+            postInternoMotivo,
+            status: 'Agendada'
         };
-    } else {
-        const newId = agendas.length > 0 ? Math.max(...agendas.map(a => a.id)) + 1 : 1;
-        agendas.push({
-            id: newId,
-            consultorId,
-            consultorNome: consultor.nome,
-            cliente,
-            data,
-            hora,
-            tema,
-            status: 'Agendada',
-            duracao,
-            observacoes,
-            participantes: currentParticipants,
-            roadmapItems: currentRoadmapItems,
-            ata,
-            postLinkedin,
-            postLinkedinMotivo,
-            postInterno,
-            postInternoMotivo
-        });
+
+        if (editingId) {
+            // Editar agenda existente
+            await api.put(`/api/agendas/${editingId}`, agendaData);
+        } else {
+            // Criar nova agenda
+            await api.post('/api/agendas', agendaData);
+        }
+
+        closeAgendaModal();
+        await loadAgendas();
+        await updateStats();
+    } catch (error) {
+        console.error('Erro ao salvar agenda:', error);
+        alert('Erro ao salvar agenda. Tente novamente.');
     }
-
-    localStorage.setItem('agendas', JSON.stringify(agendas));
-
-    // Recalcular todas as agendas usadas dos consultores
-    recalcularAgendasConsultores();
-
-    closeAgendaModal();
-    loadAgendas();
-    updateStats();
 }
 
-function deleteAgenda(id) {
+async function deleteAgenda(id) {
     if (!confirm('Deseja realmente excluir esta agenda?')) return;
 
-    let agendas = JSON.parse(localStorage.getItem('agendas'));
-    agendas = agendas.filter(a => a.id !== id);
-    localStorage.setItem('agendas', JSON.stringify(agendas));
-
-    // Recalcular todas as agendas usadas dos consultores
-    recalcularAgendasConsultores();
-
-    loadAgendas();
-    updateStats();
+    try {
+        await api.delete(`/api/agendas/${id}`);
+        await loadAgendas();
+        await updateStats();
+    } catch (error) {
+        console.error('Erro ao excluir agenda:', error);
+        alert('Erro ao excluir agenda. Tente novamente.');
+    }
 }
 
-function viewAgendaDetails(id) {
-    const agendas = JSON.parse(localStorage.getItem('agendas'));
-    const agenda = agendas.find(a => a.id === id);
+async function viewAgendaDetails(id) {
+    try {
+        const agendas = await api.get('/api/agendas');
+        const agenda = agendas.find(a => a.id === id);
 
     if (agenda) {
         let details = `
@@ -745,23 +737,31 @@ ${agenda.ata || 'Sem ata registrada'}
         `;
         alert(details);
     }
+    } catch (error) {
+        console.error('Erro ao visualizar detalhes:', error);
+        alert('Erro ao carregar detalhes da agenda.');
+    }
 }
 
 // ===== PARTICIPANTES =====
-function updateMaxParticipants() {
+async function updateMaxParticipants() {
     const consultorId = parseInt(document.getElementById('agendaConsultor').value);
     if (!consultorId) {
         document.getElementById('maxParticipants').textContent = '0';
         return;
     }
 
-    const consultores = JSON.parse(localStorage.getItem('consultores'));
-    const consultor = consultores.find(c => c.id === consultorId);
-    document.getElementById('maxParticipants').textContent = consultor ? consultor.maxParticipantes : '0';
-    document.getElementById('currentParticipants').textContent = currentParticipants.length;
+    try {
+        const consultores = await api.get('/api/consultores');
+        const consultor = consultores.find(c => c.id === consultorId);
+        document.getElementById('maxParticipants').textContent = consultor ? consultor.maxParticipantes : '0';
+        document.getElementById('currentParticipants').textContent = currentParticipants.length;
+    } catch (error) {
+        console.error('Erro ao atualizar max participantes:', error);
+    }
 }
 
-function addParticipant() {
+async function addParticipant() {
     const name = document.getElementById('participantName').value.trim();
     const email = document.getElementById('participantEmail').value.trim();
 
@@ -776,18 +776,23 @@ function addParticipant() {
         return;
     }
 
-    const consultores = JSON.parse(localStorage.getItem('consultores'));
-    const consultor = consultores.find(c => c.id === consultorId);
+    try {
+        const consultores = await api.get('/api/consultores');
+        const consultor = consultores.find(c => c.id === consultorId);
 
-    if (currentParticipants.length >= consultor.maxParticipantes) {
-        alert(`Limite de participantes atingido! Máximo: ${consultor.maxParticipantes}`);
-        return;
+        if (currentParticipants.length >= consultor.maxParticipantes) {
+            alert(`Limite de participantes atingido! Máximo: ${consultor.maxParticipantes}`);
+            return;
+        }
+
+        currentParticipants.push({ nome: name, email: email || '' });
+        document.getElementById('participantName').value = '';
+        document.getElementById('participantEmail').value = '';
+        renderParticipants();
+    } catch (error) {
+        console.error('Erro ao adicionar participante:', error);
+        alert('Erro ao verificar limite. Tente novamente.');
     }
-
-    currentParticipants.push({ nome: name, email: email || '' });
-    document.getElementById('participantName').value = '';
-    document.getElementById('participantEmail').value = '';
-    renderParticipants();
 }
 
 function removeParticipant(index) {
@@ -816,10 +821,13 @@ function renderParticipants() {
 }
 
 // ===== ROADMAP NA AGENDA (KANBAN VISUAL FODA) =====
-function renderAgendaRoadmap() {
-    const kanban = document.getElementById('agendaRoadmapKanban');
-    const produtos = JSON.parse(localStorage.getItem('produtos')) || [];
-    const roadmap = JSON.parse(localStorage.getItem('roadmap')) || [];
+async function renderAgendaRoadmap() {
+    try {
+        const kanban = document.getElementById('agendaRoadmapKanban');
+        const [produtos, roadmap] = await Promise.all([
+            api.get('/api/produtos'),
+            api.get('/api/roadmap')
+        ]);
 
     kanban.innerHTML = '';
 
@@ -899,13 +907,17 @@ function renderAgendaRoadmap() {
     });
 
     kanban.appendChild(columnsWrapper);
+    } catch (error) {
+        console.error('Erro ao renderizar roadmap:', error);
+    }
 }
 
-function toggleRoadmapItem(itemId) {
-    const roadmap = JSON.parse(localStorage.getItem('roadmap')) || [];
-    const item = roadmap.find(r => r.id === itemId);
+async function toggleRoadmapItem(itemId) {
+    try {
+        const roadmap = await api.get('/api/roadmap');
+        const item = roadmap.find(r => r.id === itemId);
 
-    if (!item) return;
+        if (!item) return;
 
     const existingIndex = currentRoadmapItems.findIndex(r => r.id === itemId);
 
@@ -917,9 +929,12 @@ function toggleRoadmapItem(itemId) {
         currentRoadmapItems.push(item);
     }
 
-    // Atualizar ambas as visualizações
-    renderAgendaRoadmap();
-    renderAgendaRoadmapTimeline();
+        // Atualizar ambas as visualizações
+        renderAgendaRoadmap();
+        renderAgendaRoadmapTimeline();
+    } catch (error) {
+        console.error('Erro ao alternar item roadmap:', error);
+    }
 }
 
 function removeRoadmapFromAgenda(itemId) {
@@ -958,10 +973,13 @@ function switchRoadmapView(view) {
     }
 }
 
-function renderAgendaRoadmapTimeline() {
-    const timeline = document.getElementById('agendaRoadmapTimeline');
-    const roadmap = JSON.parse(localStorage.getItem('roadmap')) || [];
-    const produtos = JSON.parse(localStorage.getItem('produtos')) || [];
+async function renderAgendaRoadmapTimeline() {
+    try {
+        const timeline = document.getElementById('agendaRoadmapTimeline');
+        const [roadmap, produtos] = await Promise.all([
+            api.get('/api/roadmap'),
+            api.get('/api/produtos')
+        ]);
 
     timeline.innerHTML = '';
 
@@ -1094,6 +1112,9 @@ function renderAgendaRoadmapTimeline() {
             itemsContainer.appendChild(itemDiv);
         });
     });
+    } catch (error) {
+        console.error('Erro ao renderizar timeline:', error);
+    }
 }
 
 // ===== ATA =====
@@ -1122,12 +1143,13 @@ function togglePostReason(type) {
 }
 
 // ===== CONSULTORES =====
-function loadConsultores() {
-    const consultores = JSON.parse(localStorage.getItem('consultores'));
-    const grid = document.getElementById('consultoresGrid');
-    grid.innerHTML = '';
+async function loadConsultores() {
+    try {
+        const consultores = await api.get('/api/consultores');
+        const grid = document.getElementById('consultoresGrid');
+        grid.innerHTML = '';
 
-    consultores.forEach(consultor => {
+        consultores.forEach(consultor => {
         const div = document.createElement('div');
         div.className = 'consultor-card';
 
@@ -1179,6 +1201,9 @@ function loadConsultores() {
         `;
         grid.appendChild(div);
     });
+    } catch (error) {
+        console.error('Erro ao carregar consultores:', error);
+    }
 }
 
 function openConsultorModal() {
@@ -1198,25 +1223,30 @@ function closeConsultorModal() {
     document.getElementById('consultorModal').classList.remove('active');
 }
 
-function editConsultor(id) {
-    const consultores = JSON.parse(localStorage.getItem('consultores'));
-    const consultor = consultores.find(c => c.id === id);
+async function editConsultor(id) {
+    try {
+        const consultores = await api.get('/api/consultores');
+        const consultor = consultores.find(c => c.id === id);
 
-    if (consultor) {
-        editingId = id;
-        document.getElementById('consultorModalTitle').textContent = 'Editar Consultor';
-        document.getElementById('consultorNome').value = consultor.nome;
-        document.getElementById('consultorEmail').value = consultor.email;
-        document.getElementById('consultorTelefone').value = consultor.telefone;
-        document.getElementById('consultorEspecialidade').value = consultor.especialidade;
-        document.getElementById('consultorAgendas').value = consultor.agendasDisponiveis;
-        document.getElementById('consultorMaxParticipantes').value = consultor.maxParticipantes || 10;
-        document.getElementById('consultorStatus').value = consultor.status;
-        document.getElementById('consultorModal').classList.add('active');
+        if (consultor) {
+            editingId = id;
+            document.getElementById('consultorModalTitle').textContent = 'Editar Consultor';
+            document.getElementById('consultorNome').value = consultor.nome;
+            document.getElementById('consultorEmail').value = consultor.email;
+            document.getElementById('consultorTelefone').value = consultor.telefone;
+            document.getElementById('consultorEspecialidade').value = consultor.especialidade;
+            document.getElementById('consultorAgendas').value = consultor.agendasDisponiveis;
+            document.getElementById('consultorMaxParticipantes').value = consultor.maxParticipantes || 10;
+            document.getElementById('consultorStatus').value = consultor.status;
+            document.getElementById('consultorModal').classList.add('active');
+        }
+    } catch (error) {
+        console.error('Erro ao carregar consultor:', error);
+        alert('Erro ao carregar consultor. Tente novamente.');
     }
 }
 
-function saveConsultor() {
+async function saveConsultor() {
     const nome = document.getElementById('consultorNome').value.trim();
     const email = document.getElementById('consultorEmail').value.trim();
     const telefone = document.getElementById('consultorTelefone').value.trim();
@@ -1230,12 +1260,8 @@ function saveConsultor() {
         return;
     }
 
-    const consultores = JSON.parse(localStorage.getItem('consultores'));
-
-    if (editingId) {
-        const index = consultores.findIndex(c => c.id === editingId);
-        consultores[index] = {
-            ...consultores[index],
+    try {
+        const consultorData = {
             nome,
             email,
             telefone,
@@ -1244,72 +1270,76 @@ function saveConsultor() {
             maxParticipantes,
             status
         };
-    } else {
-        const newId = consultores.length > 0 ? Math.max(...consultores.map(c => c.id)) + 1 : 1;
-        consultores.push({
-            id: newId,
-            nome,
-            email,
-            telefone,
-            especialidade,
-            agendasDisponiveis,
-            agendasUsadas: 0,
-            maxParticipantes,
-            status
-        });
-    }
 
-    localStorage.setItem('consultores', JSON.stringify(consultores));
-    closeConsultorModal();
-    loadConsultores();
-    updateStats();
-    populateSelects();
+        if (editingId) {
+            await api.put(`/api/consultores/${editingId}`, consultorData);
+        } else {
+            await api.post('/api/consultores', consultorData);
+        }
+
+        closeConsultorModal();
+        await loadConsultores();
+        await updateStats();
+        populateSelects();
+    } catch (error) {
+        console.error('Erro ao salvar consultor:', error);
+        alert('Erro ao salvar consultor. Tente novamente.');
+    }
 }
 
-function deleteConsultor(id) {
+async function deleteConsultor(id) {
     if (!confirm('Deseja realmente excluir este consultor?')) return;
 
-    let consultores = JSON.parse(localStorage.getItem('consultores'));
-    consultores = consultores.filter(c => c.id !== id);
-    localStorage.setItem('consultores', JSON.stringify(consultores));
-    loadConsultores();
-    updateStats();
-    populateSelects();
+    try {
+        await api.delete(`/api/consultores/${id}`);
+        await loadConsultores();
+        await updateStats();
+        populateSelects();
+    } catch (error) {
+        console.error('Erro ao excluir consultor:', error);
+        alert('Erro ao excluir consultor. Tente novamente.');
+    }
 }
 
 // ===== PRODUTOS =====
-function loadProdutos() {
-    const produtos = JSON.parse(localStorage.getItem('produtos'));
-    const roadmap = JSON.parse(localStorage.getItem('roadmap'));
-    const grid = document.getElementById('produtosGrid');
-    grid.innerHTML = '';
+async function loadProdutos() {
+    try {
+        const [produtos, roadmap] = await Promise.all([
+            api.get('/api/produtos'),
+            api.get('/api/roadmap')
+        ]);
+        const grid = document.getElementById('produtosGrid');
+        grid.innerHTML = '';
 
-    produtos.forEach(produto => {
-        const itensCount = roadmap.filter(r => r.produtoId === produto.id).length;
+        produtos.forEach(produto => {
+            const itensCount = roadmap.filter(r => r.produtoId === produto.id).length;
 
-        const div = document.createElement('div');
-        div.className = 'produto-card';
-        div.style.borderTopColor = produto.cor;
+            const div = document.createElement('div');
+            div.className = 'produto-card';
+            div.style.borderTopColor = produto.cor;
 
-        div.innerHTML = `
-            <div class="produto-header">
-                <div class="produto-icon" style="background:${produto.cor}"></div>
-                <div class="produto-info">
-                    <h3>${produto.nome}</h3>
-                    <p>${produto.categoria}</p>
+            div.innerHTML = `
+                <div class="produto-header">
+                    <div class="produto-icon" style="background:${produto.cor}"></div>
+                    <div class="produto-info">
+                        <h3>${produto.nome}</h3>
+                        <p>${produto.categoria}</p>
+                    </div>
                 </div>
-            </div>
-            <p style="font-size:13px;color:#666;margin:12px 0;">${produto.descricao}</p>
-            <div class="produto-stats">
-                <strong>${itensCount}</strong> itens no roadmap
-            </div>
-            <div class="consultor-actions" style="margin-top:12px;">
-                <button class="btn-secondary" onclick="editProduto(${produto.id})">✏️ Editar</button>
-                <button class="btn-secondary" onclick="deleteProduto(${produto.id})">🗑️</button>
-            </div>
-        `;
-        grid.appendChild(div);
-    });
+                <p style="font-size:13px;color:#666;margin:12px 0;">${produto.descricao}</p>
+                <div class="produto-stats">
+                    <strong>${itensCount}</strong> itens no roadmap
+                </div>
+                <div class="consultor-actions" style="margin-top:12px;">
+                    <button class="btn-secondary" onclick="editProduto(${produto.id})">✏️ Editar</button>
+                    <button class="btn-secondary" onclick="deleteProduto(${produto.id})">🗑️</button>
+                </div>
+            `;
+            grid.appendChild(div);
+        });
+    } catch (error) {
+        console.error('Erro ao carregar produtos:', error);
+    }
 }
 
 function openProdutoModal() {
@@ -1326,22 +1356,27 @@ function closeProdutoModal() {
     document.getElementById('produtoModal').classList.remove('active');
 }
 
-function editProduto(id) {
-    const produtos = JSON.parse(localStorage.getItem('produtos'));
-    const produto = produtos.find(p => p.id === id);
+async function editProduto(id) {
+    try {
+        const produtos = await api.get('/api/produtos');
+        const produto = produtos.find(p => p.id === id);
 
-    if (produto) {
-        editingId = id;
-        document.getElementById('produtoModalTitle').textContent = 'Editar Produto';
-        document.getElementById('produtoNome').value = produto.nome;
-        document.getElementById('produtoDescricao').value = produto.descricao;
-        document.getElementById('produtoCategoria').value = produto.categoria;
-        document.getElementById('produtoCor').value = produto.cor;
-        document.getElementById('produtoModal').classList.add('active');
+        if (produto) {
+            editingId = id;
+            document.getElementById('produtoModalTitle').textContent = 'Editar Produto';
+            document.getElementById('produtoNome').value = produto.nome;
+            document.getElementById('produtoDescricao').value = produto.descricao;
+            document.getElementById('produtoCategoria').value = produto.categoria;
+            document.getElementById('produtoCor').value = produto.cor;
+            document.getElementById('produtoModal').classList.add('active');
+        }
+    } catch (error) {
+        console.error('Erro ao carregar produto:', error);
+        alert('Erro ao carregar produto. Tente novamente.');
     }
 }
 
-function saveProduto() {
+async function saveProduto() {
     const nome = document.getElementById('produtoNome').value.trim();
     const descricao = document.getElementById('produtoDescricao').value.trim();
     const categoria = document.getElementById('produtoCategoria').value.trim();
@@ -1352,42 +1387,40 @@ function saveProduto() {
         return;
     }
 
-    const produtos = JSON.parse(localStorage.getItem('produtos'));
-
-    if (editingId) {
-        const index = produtos.findIndex(p => p.id === editingId);
-        produtos[index] = {
-            ...produtos[index],
+    try {
+        const produtoData = {
             nome,
             descricao,
             categoria,
             cor
         };
-    } else {
-        const newId = produtos.length > 0 ? Math.max(...produtos.map(p => p.id)) + 1 : 1;
-        produtos.push({
-            id: newId,
-            nome,
-            descricao,
-            categoria,
-            cor
-        });
-    }
 
-    localStorage.setItem('produtos', JSON.stringify(produtos));
-    closeProdutoModal();
-    loadProdutos();
-    populateSelects();
+        if (editingId) {
+            await api.put(`/api/produtos/${editingId}`, produtoData);
+        } else {
+            await api.post('/api/produtos', produtoData);
+        }
+
+        closeProdutoModal();
+        await loadProdutos();
+        populateSelects();
+    } catch (error) {
+        console.error('Erro ao salvar produto:', error);
+        alert('Erro ao salvar produto. Tente novamente.');
+    }
 }
 
-function deleteProduto(id) {
+async function deleteProduto(id) {
     if (!confirm('Deseja realmente excluir este produto?')) return;
 
-    let produtos = JSON.parse(localStorage.getItem('produtos'));
-    produtos = produtos.filter(p => p.id !== id);
-    localStorage.setItem('produtos', JSON.stringify(produtos));
-    loadProdutos();
-    populateSelects();
+    try {
+        await api.delete(`/api/produtos/${id}`);
+        await loadProdutos();
+        populateSelects();
+    } catch (error) {
+        console.error('Erro ao excluir produto:', error);
+        alert('Erro ao excluir produto. Tente novamente.');
+    }
 }
 
 // ===== ROADMAP =====
@@ -1575,12 +1608,13 @@ function renderMainRoadmapTimeline() {
     });
 }
 
-function loadRoadmap() {
-    const roadmap = JSON.parse(localStorage.getItem('roadmap'));
-    const list = document.getElementById('roadmapList');
-    list.innerHTML = '';
+async function loadRoadmap() {
+    try {
+        const roadmap = await api.get('/api/roadmap');
+        const list = document.getElementById('roadmapList');
+        list.innerHTML = '';
 
-    roadmap.forEach(item => {
+        roadmap.forEach(item => {
         const div = document.createElement('div');
         div.className = 'roadmap-item';
 
@@ -1613,9 +1647,12 @@ function loadRoadmap() {
         `;
         list.appendChild(div);
     });
+    } catch (error) {
+        console.error('Erro ao carregar roadmap:', error);
+    }
 }
 
-function filterRoadmap() {
+async function filterRoadmap() {
     const filterProduto = document.getElementById('filterProdutoRoadmap').value;
     const filterStatus = document.getElementById('filterStatusRoadmap').value;
 
@@ -1682,26 +1719,31 @@ function closeRoadmapModal() {
     document.getElementById('roadmapModal').classList.remove('active');
 }
 
-function editRoadmap(id) {
-    const roadmap = JSON.parse(localStorage.getItem('roadmap'));
-    const item = roadmap.find(r => r.id === id);
+async function editRoadmap(id) {
+    try {
+        const roadmap = await api.get('/api/roadmap');
+        const item = roadmap.find(r => r.id === id);
 
-    if (item) {
-        editingId = id;
-        document.getElementById('roadmapModalTitle').textContent = 'Editar Item Roadmap';
-        document.getElementById('roadmapTitulo').value = item.titulo;
-        document.getElementById('roadmapProduto').value = item.produtoId;
-        document.getElementById('roadmapStatus').value = item.status;
-        document.getElementById('roadmapDescricao').value = item.descricao || '';
-        document.getElementById('roadmapPrioridade').value = item.prioridade;
-        document.getElementById('roadmapPrevisao').value = item.previsao || '';
-        document.getElementById('roadmapDependeReceita').checked = item.dependeReceita || false;
-        document.getElementById('roadmapDependencias').value = item.dependencias || '';
-        document.getElementById('roadmapModal').classList.add('active');
+        if (item) {
+            editingId = id;
+            document.getElementById('roadmapModalTitle').textContent = 'Editar Item Roadmap';
+            document.getElementById('roadmapTitulo').value = item.titulo;
+            document.getElementById('roadmapProduto').value = item.produtoId;
+            document.getElementById('roadmapStatus').value = item.status;
+            document.getElementById('roadmapDescricao').value = item.descricao || '';
+            document.getElementById('roadmapPrioridade').value = item.prioridade;
+            document.getElementById('roadmapPrevisao').value = item.previsao || '';
+            document.getElementById('roadmapDependeReceita').checked = item.dependeReceita || false;
+            document.getElementById('roadmapDependencias').value = item.dependencias || '';
+            document.getElementById('roadmapModal').classList.add('active');
+        }
+    } catch (error) {
+        console.error('Erro ao carregar item roadmap:', error);
+        alert('Erro ao carregar item. Tente novamente.');
     }
 }
 
-function saveRoadmap() {
+async function saveRoadmap() {
     const titulo = document.getElementById('roadmapTitulo').value.trim();
     const produtoId = parseInt(document.getElementById('roadmapProduto').value);
     const status = document.getElementById('roadmapStatus').value;
@@ -1716,14 +1758,11 @@ function saveRoadmap() {
         return;
     }
 
-    const roadmap = JSON.parse(localStorage.getItem('roadmap'));
-    const produtos = JSON.parse(localStorage.getItem('produtos'));
-    const produto = produtos.find(p => p.id === produtoId);
+    try {
+        const produtos = await api.get('/api/produtos');
+        const produto = produtos.find(p => p.id === produtoId);
 
-    if (editingId) {
-        const index = roadmap.findIndex(r => r.id === editingId);
-        roadmap[index] = {
-            ...roadmap[index],
+        const roadmapData = {
             titulo,
             produtoId,
             produtoNome: produto.nome,
@@ -1734,52 +1773,51 @@ function saveRoadmap() {
             dependeReceita,
             dependencias
         };
-    } else {
-        const newId = roadmap.length > 0 ? Math.max(...roadmap.map(r => r.id)) + 1 : 1;
-        roadmap.push({
-            id: newId,
-            titulo,
-            produtoId,
-            produtoNome: produto.nome,
-            descricao,
-            status,
-            prioridade,
-            previsao,
-            dependeReceita,
-            dependencias,
-            agendaId: null
-        });
-    }
 
-    localStorage.setItem('roadmap', JSON.stringify(roadmap));
-    closeRoadmapModal();
-    loadRoadmap();
-    updateStats();
+        if (editingId) {
+            await api.put(`/api/roadmap/${editingId}`, roadmapData);
+        } else {
+            await api.post('/api/roadmap', roadmapData);
+        }
+
+        closeRoadmapModal();
+        await loadRoadmap();
+        await updateStats();
+    } catch (error) {
+        console.error('Erro ao salvar roadmap:', error);
+        alert('Erro ao salvar item. Tente novamente.');
+    }
 }
 
-function deleteRoadmap(id) {
+async function deleteRoadmap(id) {
     if (!confirm('Deseja realmente excluir este item?')) return;
 
-    let roadmap = JSON.parse(localStorage.getItem('roadmap'));
-    roadmap = roadmap.filter(r => r.id !== id);
-    localStorage.setItem('roadmap', JSON.stringify(roadmap));
-    loadRoadmap();
-    updateStats();
+    try {
+        await api.delete(`/api/roadmap/${id}`);
+        await loadRoadmap();
+        await updateStats();
+    } catch (error) {
+        console.error('Erro ao excluir item roadmap:', error);
+        alert('Erro ao excluir item. Tente novamente.');
+    }
 }
 
 // ===== TEMAS =====
-function loadTemas() {
-    const temas = JSON.parse(localStorage.getItem('temas'));
-    const agendas = JSON.parse(localStorage.getItem('agendas'));
+async function loadTemas() {
+    try {
+        const [temas, agendas] = await Promise.all([
+            api.get('/api/temas'),
+            api.get('/api/agendas')
+        ]);
 
-    temas.forEach(tema => {
-        tema.count = agendas.filter(a => a.tema === tema.nome).length;
-    });
+        temas.forEach(tema => {
+            tema.count = agendas.filter(a => a.tema === tema.nome).length;
+        });
 
-    const list = document.getElementById('temasList');
-    list.innerHTML = '';
+        const list = document.getElementById('temasList');
+        list.innerHTML = '';
 
-    temas.forEach(tema => {
+        temas.forEach(tema => {
         const div = document.createElement('div');
         div.className = 'tema-item';
         div.style.borderLeftColor = tema.cor;
@@ -1798,6 +1836,9 @@ function loadTemas() {
         `;
         list.appendChild(div);
     });
+    } catch (error) {
+        console.error('Erro ao carregar temas:', error);
+    }
 }
 
 function openTemaModal() {
@@ -1813,21 +1854,26 @@ function closeTemaModal() {
     document.getElementById('temaModal').classList.remove('active');
 }
 
-function editTema(id) {
-    const temas = JSON.parse(localStorage.getItem('temas'));
-    const tema = temas.find(t => t.id === id);
+async function editTema(id) {
+    try {
+        const temas = await api.get('/api/temas');
+        const tema = temas.find(t => t.id === id);
 
-    if (tema) {
-        editingId = id;
-        document.getElementById('temaModalTitle').textContent = 'Editar Tema';
-        document.getElementById('temaNome').value = tema.nome;
-        document.getElementById('temaDescricao').value = tema.descricao;
-        document.getElementById('temaCor').value = tema.cor;
-        document.getElementById('temaModal').classList.add('active');
+        if (tema) {
+            editingId = id;
+            document.getElementById('temaModalTitle').textContent = 'Editar Tema';
+            document.getElementById('temaNome').value = tema.nome;
+            document.getElementById('temaDescricao').value = tema.descricao;
+            document.getElementById('temaCor').value = tema.cor;
+            document.getElementById('temaModal').classList.add('active');
+        }
+    } catch (error) {
+        console.error('Erro ao carregar tema:', error);
+        alert('Erro ao carregar tema. Tente novamente.');
     }
 }
 
-function saveTema() {
+async function saveTema() {
     const nome = document.getElementById('temaNome').value.trim();
     const descricao = document.getElementById('temaDescricao').value.trim();
     const cor = document.getElementById('temaCor').value;
@@ -1837,41 +1883,39 @@ function saveTema() {
         return;
     }
 
-    const temas = JSON.parse(localStorage.getItem('temas'));
-
-    if (editingId) {
-        const index = temas.findIndex(t => t.id === editingId);
-        temas[index] = {
-            ...temas[index],
+    try {
+        const temaData = {
             nome,
             descricao,
             cor
         };
-    } else {
-        const newId = temas.length > 0 ? Math.max(...temas.map(t => t.id)) + 1 : 1;
-        temas.push({
-            id: newId,
-            nome,
-            descricao,
-            cor,
-            count: 0
-        });
-    }
 
-    localStorage.setItem('temas', JSON.stringify(temas));
-    closeTemaModal();
-    loadTemas();
-    populateSelects();
+        if (editingId) {
+            await api.put(`/api/temas/${editingId}`, temaData);
+        } else {
+            await api.post('/api/temas', temaData);
+        }
+
+        closeTemaModal();
+        await loadTemas();
+        populateSelects();
+    } catch (error) {
+        console.error('Erro ao salvar tema:', error);
+        alert('Erro ao salvar tema. Tente novamente.');
+    }
 }
 
-function deleteTema(id) {
+async function deleteTema(id) {
     if (!confirm('Deseja realmente excluir este tema?')) return;
 
-    let temas = JSON.parse(localStorage.getItem('temas'));
-    temas = temas.filter(t => t.id !== id);
-    localStorage.setItem('temas', JSON.stringify(temas));
-    loadTemas();
-    populateSelects();
+    try {
+        await api.delete(`/api/temas/${id}`);
+        await loadTemas();
+        populateSelects();
+    } catch (error) {
+        console.error('Erro ao excluir tema:', error);
+        alert('Erro ao excluir tema. Tente novamente.');
+    }
 }
 
 // ===== RELATÓRIOS =====
@@ -1925,10 +1969,13 @@ function recalcularAgendasConsultores() {
 }
 
 // ===== HELPERS =====
-function populateSelects() {
-    const consultores = JSON.parse(localStorage.getItem('consultores'));
-    const temas = JSON.parse(localStorage.getItem('temas'));
-    const produtos = JSON.parse(localStorage.getItem('produtos'));
+async function populateSelects() {
+    try {
+        const [consultores, temas, produtos] = await Promise.all([
+            api.get('/api/consultores'),
+            api.get('/api/temas'),
+            api.get('/api/produtos')
+        ]);
 
     // Select de consultor
     const agendaConsultorSelect = document.getElementById('agendaConsultor');
@@ -1979,6 +2026,9 @@ function populateSelects() {
         option.textContent = p.nome;
         filterProdutoSelect.appendChild(option);
     });
+    } catch (error) {
+        console.error('Erro ao popular selects:', error);
+    }
 }
 
 function formatDate(dateString) {
