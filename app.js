@@ -298,6 +298,13 @@ function logout() {
     document.getElementById('password').value = '';
 }
 
+// Atualizar campo hidden com temas selecionados
+function updateTemasHiddenField() {
+    const checkboxes = document.querySelectorAll('.tema-checkbox:checked');
+    const selecionados = Array.from(checkboxes).map(cb => cb.value);
+    document.getElementById('agendaTema').value = selecionados.join(', ');
+}
+
 function showDashboard() {
     document.getElementById('loginScreen').classList.remove('active');
     document.getElementById('dashboardScreen').classList.add('active');
@@ -418,9 +425,13 @@ async function updateStats() {
 
         const capacidadeRestante = capacidadeTotal - capacidadeUsada;
 
+        // Total de agendas (todas)
+        const totalAgendas = agendas.length;
+
         // Atualizar DOM
         document.getElementById('agendasHoje').textContent = agendasHoje;
         document.getElementById('agendasMes').textContent = agendasMes;
+        document.getElementById('agendasTotal').textContent = totalAgendas;
         document.getElementById('consultoresAtivos').textContent = consultoresAtivos;
         document.getElementById('capacidadeRestante').textContent = capacidadeRestante;
     } catch (error) {
@@ -554,7 +565,11 @@ function openAgendaModal(startTab = 'basicInfo') {
     document.getElementById('agendaCliente').value = '';
     document.getElementById('agendaData').value = '';
     document.getElementById('agendaHora').value = '';
+
+    // Desmarcar todos os checkboxes de temas
+    document.querySelectorAll('.tema-checkbox').forEach(cb => cb.checked = false);
     document.getElementById('agendaTema').value = '';
+
     document.getElementById('agendaDuracao').value = '60';
     document.getElementById('agendaObs').value = '';
     document.getElementById('agendaAta').value = '';
@@ -599,7 +614,14 @@ async function editAgenda(id) {
             document.getElementById('agendaCliente').value = agenda.cliente;
             document.getElementById('agendaData').value = agenda.data;
             document.getElementById('agendaHora').value = agenda.hora;
+
+            // Marcar checkboxes dos temas selecionados
+            const temasSelecionados = agenda.tema.split(', ');
+            document.querySelectorAll('.tema-checkbox').forEach(cb => {
+                cb.checked = temasSelecionados.includes(cb.value);
+            });
             document.getElementById('agendaTema').value = agenda.tema;
+
             document.getElementById('agendaDuracao').value = agenda.duracao;
             document.getElementById('agendaObs').value = agenda.observacoes || '';
             document.getElementById('agendaAta').value = agenda.ata || '';
@@ -1987,14 +2009,22 @@ async function populateSelects() {
         agendaConsultorSelect.appendChild(option);
     });
 
-    // Select de tema
-    const agendaTemaSelect = document.getElementById('agendaTema');
-    agendaTemaSelect.innerHTML = '<option value="">Selecione...</option>';
+    // Checkboxes de temas (múltipla seleção)
+    const temasContainer = document.getElementById('temasCheckboxContainer');
+    temasContainer.innerHTML = '';
     temas.forEach(t => {
-        const option = document.createElement('option');
-        option.value = t.nome;
-        option.textContent = t.nome;
-        agendaTemaSelect.appendChild(option);
+        const label = document.createElement('label');
+        label.style.display = 'block';
+        label.style.padding = '8px';
+        label.style.cursor = 'pointer';
+        label.style.borderBottom = '1px solid #eee';
+        label.innerHTML = `
+            <input type="checkbox" class="tema-checkbox" value="${t.nome}" style="margin-right:8px;">
+            <strong>${t.nome}</strong>
+            <br><small style="color:#666;margin-left:24px;">${t.descricao}</small>
+        `;
+        label.querySelector('input').addEventListener('change', updateTemasHiddenField);
+        temasContainer.appendChild(label);
     });
 
     // Filtro de consultor

@@ -95,6 +95,10 @@
                         <strong id="agendasMes">0</strong>
                     </div>
                     <div class="stat-item">
+                        <span>Total de Agendas</span>
+                        <strong id="agendasTotal">0</strong>
+                    </div>
+                    <div class="stat-item">
                         <span>Consultores Ativos</span>
                         <strong id="consultoresAtivos">0</strong>
                     </div>
@@ -293,11 +297,12 @@
                             <label>Hora *</label>
                             <input type="time" id="agendaHora" required>
                         </div>
-                        <div class="input-group">
-                            <label>Tema *</label>
-                            <select id="agendaTema" required>
-                                <option value="">Selecione...</option>
-                            </select>
+                        <div class="input-group full-width">
+                            <label>Temas * (selecione um ou mais)</label>
+                            <div id="temasCheckboxContainer" style="max-height:200px;overflow-y:auto;border:1px solid #ddd;padding:10px;border-radius:5px;background:#f9f9f9;">
+                                <!-- Checkboxes de temas serão carregados aqui -->
+                            </div>
+                            <input type="hidden" id="agendaTema" required>
                         </div>
                         <div class="input-group">
                             <label>Duração (min)</label>
