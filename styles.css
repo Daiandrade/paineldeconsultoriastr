@@ -418,11 +418,34 @@ body {
     background: var(--white);
     border-radius: 12px;
     box-shadow: var(--shadow-md);
-    overflow: hidden;
+    overflow-x: auto;
+    overflow-y: visible;
+    max-width: 100%;
+    -webkit-overflow-scrolling: touch; /* Scroll suave no mobile */
+}
+
+/* Scroll horizontal visível */
+.table-container::-webkit-scrollbar {
+    height: 8px;
+}
+
+.table-container::-webkit-scrollbar-track {
+    background: var(--gray-100);
+    border-radius: 4px;
+}
+
+.table-container::-webkit-scrollbar-thumb {
+    background: var(--tr-orange);
+    border-radius: 4px;
+}
+
+.table-container::-webkit-scrollbar-thumb:hover {
+    background: #cc6600;
 }
 
 .data-table {
     width: 100%;
+    min-width: 1200px; /* Garante que a tabela não encolha demais */
     border-collapse: collapse;
 }
 
@@ -490,6 +513,8 @@ body {
 .action-buttons {
     display: flex;
     gap: 8px;
+    white-space: nowrap; /* Impede quebra de linha */
+    min-width: 130px; /* Largura mínima para 3 botões */
 }
 
 .btn-icon {
